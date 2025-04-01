@@ -137,53 +137,6 @@ catch (Exception ex)
 
 #endregion
 
-#region Shape for reading and writing, symmetrical proposal (Dictionary<string, JsonNode> not supported yet)
-
-try
-{
-    Console.WriteLine();
-    Console.WriteLine("Shape for reading and writing, symmetrical proposal");
-    Indent();
-    var recordSymmetricalProposal = new RecordSymmetricalProposal
-    {
-        Id = "1",
-        ["category"] = "fiction",
-        ["title"] = "The Hobbit",
-        ["author"] = "J.R.R. Tolkien",
-        ["tags"] = JsonValue.Create(tags)
-    };
-
-    Indent();
-    Console.WriteLine($"{indent}---Writing---");
-    Indent();
-    Console.WriteLine($"{indent}ID: {recordSymmetricalProposal.Id} ({recordSymmetricalProposal.Id.GetType()})");
-    Console.WriteLine(
-        $"{indent}Category: {recordSymmetricalProposal["category"]} ({recordSymmetricalProposal["category"].GetType()})");
-    Console.WriteLine($"{indent}Tags: {recordSymmetricalProposal["tags"]} ({recordSymmetricalProposal["tags"].GetType()})");
-    Unindent();
-
-    recordSymmetricalProposal =
-        JsonSerializer.Deserialize<RecordSymmetricalProposal>(JsonSerializer.Serialize(recordSymmetricalProposal)) ??
-        throw new Exception("Unexpected null record");
-
-    Console.WriteLine();
-    Console.WriteLine($"{indent}---Reading---");
-    Indent();
-    Console.WriteLine($"{indent}ID: {recordSymmetricalProposal.Id} ({recordSymmetricalProposal.Id.GetType()})");
-    Console.WriteLine(
-        $"{indent}Category: {recordSymmetricalProposal["category"]} ({recordSymmetricalProposal["category"].GetType()})");
-    Console.WriteLine($"{indent}Tags: {recordSymmetricalProposal["tags"]} ({recordSymmetricalProposal["tags"].GetType()})");
-    Unindent();
-    Unindent();
-    Unindent();
-}
-catch (Exception ex)
-{
-    Console.WriteLine(ex.ToString());
-}
-
-#endregion
-
 // ideal shape for only reading
 public record RecordForReading
 {
@@ -240,20 +193,4 @@ public record RecordSymmetrical
     }
 
     [JsonExtensionData] public JsonObject AdditionalProperties { get; set; } = new();
-}
-
-// compromise between reading and writing for symmetrical serialization, proposal
-public record RecordSymmetricalProposal
-{
-    [JsonPropertyName("id")] public string Id { get; set; }
-
-    [JsonIgnore]
-    public JsonNode this[string key]
-    {
-        get => AdditionalProperties[key] ?? throw new KeyNotFoundException();
-        set => AdditionalProperties[key] = value;
-    }
-
-    [JsonExtensionData]
-    public IDictionary<string, JsonNode> AdditionalProperties { get; set; } = new Dictionary<string, JsonNode>();
 }
