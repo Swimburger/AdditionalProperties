@@ -261,9 +261,11 @@ public record RecordWithAdditionalPropertiesClass
         set => AdditionalProperties[key] = value;
     }
 
-    [JsonExtensionData] public AdditionalProperties<object?> AdditionalProperties { get; set; } = new();
+    [JsonExtensionData] public AdditionalProperties AdditionalProperties { get; set; } = new();
 }
 
+
+public record AdditionalProperties : AdditionalProperties<object?>;
 
 public record AdditionalProperties<T> : IDictionary<string, T>
 {
