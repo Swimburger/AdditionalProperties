@@ -171,16 +171,16 @@ try
         JsonSerializer.Deserialize<RecordWithAdditionalPropertiesClass>(
             JsonSerializer.Serialize(recordWithAdditionalPropertiesClass)) ??
         throw new Exception("Unexpected null record");
-    var additionalProperties = recordWithAdditionalPropertiesClass.AdditionalProperties.ToJsonDocument();
+    var additionalProperties = recordWithAdditionalPropertiesClass.AdditionalProperties.ToJsonElementDictionary();
 
     Console.WriteLine();
     Console.WriteLine($"{indent}---Reading---");
     Indent();
     Console.WriteLine(
         $"{indent}ID: {recordWithAdditionalPropertiesClass.Id} ({recordWithAdditionalPropertiesClass.Id.GetType()})");
-    // Console.WriteLine(
-    //     $"{indent}Category: {additionalProperties["category"]} ({additionalProperties["category"].GetType()})");
-    // Console.WriteLine($"{indent}Tags: {additionalProperties["tags"]} ({additionalProperties["tags"].GetType()})");
+    Console.WriteLine(
+        $"{indent}Category: {additionalProperties["category"]} ({additionalProperties["category"].GetType()})");
+    Console.WriteLine($"{indent}Tags: {additionalProperties["tags"]} ({additionalProperties["tags"].GetType()})");
     Unindent();
     Unindent();
     Unindent();
@@ -265,8 +265,10 @@ public record RecordWithAdditionalPropertiesClass
 }
 
 
-public class AdditionalProperties<T> : Dictionary<string, T>
+public class AdditionalProperties<T> : IDictionary<string, T>
 {
+    private readonly Dictionary<string, T> _dictionary = new();
+
     public JsonObject ToJsonObject()
         => (JsonSerializer.SerializeToNode(this)
             ?? throw new InvalidOperationException("Failed to serialize AdditionalProperties to JSON Node.")
@@ -295,4 +297,52 @@ public class AdditionalProperties<T> : Dictionary<string, T>
             }
         ));
     }
+
+    public ICollection<string> Keys => _dictionary.Keys;
+    public ICollection<T> Values => _dictionary.Values;
+    public int Count => _dictionary.Count;
+    public bool IsReadOnly => false;
+
+    public T this[string key]
+    {
+        get => _dictionary[key];
+        set => _dictionary[key] = value;
+    }
+
+    public void Add(string key, T value) => _dictionary.Add(key, value);
+    public void Add(KeyValuePair<string, T> item) => _dictionary.Add(item.Key, item.Value);
+    public bool Remove(string key) => _dictionary.Remove(key);
+    public bool Remove(KeyValuePair<string, T> item) => _dictionary.Remove(item.Key);
+    public bool ContainsKey(string key) => _dictionary.ContainsKey(key);
+
+    public bool Contains(KeyValuePair<string, T> item) => _dictionary.ContainsKey(item.Key) &&
+                                                          EqualityComparer<T>.Default.Equals(_dictionary[item.Key],
+                                                              item.Value);
+
+    public bool TryGetValue(string key, out T value) => _dictionary.TryGetValue(key, out value);
+    public void Clear() => _dictionary.Clear();
+
+    public void CopyTo(KeyValuePair<string, T>[] array, int arrayIndex)
+    {
+        if (array is null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        if (arrayIndex < 0 || arrayIndex > array.Length)
+            throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+
+        if (array.Length - arrayIndex < Count)
+            throw new ArgumentException(
+                "The number of elements in the source dictionary is greater than the available space from arrayIndex to the end of the destination array.");
+
+        var i = arrayIndex;
+        foreach (var kvp in _dictionary)
+        {
+            array[i++] = kvp;
+        }
+    }
+
+    public IEnumerator<KeyValuePair<string, T>> GetEnumerator() => _dictionary.GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _dictionary.GetEnumerator();
 }
