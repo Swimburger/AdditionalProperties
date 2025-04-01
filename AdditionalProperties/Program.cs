@@ -265,7 +265,7 @@ public record RecordWithAdditionalPropertiesClass
 }
 
 
-public class AdditionalProperties<T> : IDictionary<string, T>
+public record AdditionalProperties<T> : IDictionary<string, T>
 {
     private readonly Dictionary<string, T> _dictionary = new();
 
