@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.ObjectModel;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
@@ -72,7 +73,8 @@ Indent();
 Console.WriteLine($"{indent}ID: {recordNotReallySymmetrical.Id} ({recordNotReallySymmetrical.Id.GetType()})");
 Console.WriteLine(
     $"{indent}Category: {recordNotReallySymmetrical["category"]} ({recordNotReallySymmetrical["category"].GetType()})");
-Console.WriteLine($"{indent}Tags: {recordNotReallySymmetrical["tags"]} ({recordNotReallySymmetrical["tags"].GetType()})");
+Console.WriteLine(
+    $"{indent}Tags: {recordNotReallySymmetrical["tags"]} ({recordNotReallySymmetrical["tags"].GetType()})");
 Unindent();
 recordNotReallySymmetrical =
     JsonSerializer.Deserialize<RecordNotReallySymmetrical>(JsonSerializer.Serialize(recordNotReallySymmetrical)) ??
@@ -84,7 +86,8 @@ Indent();
 Console.WriteLine($"{indent}ID: {recordNotReallySymmetrical.Id} ({recordNotReallySymmetrical.Id.GetType()})");
 Console.WriteLine(
     $"{indent}Category: {recordNotReallySymmetrical["category"]} ({recordNotReallySymmetrical["category"].GetType()})");
-Console.WriteLine($"{indent}Tags: {recordNotReallySymmetrical["tags"]} ({recordNotReallySymmetrical["tags"].GetType()})");
+Console.WriteLine(
+    $"{indent}Tags: {recordNotReallySymmetrical["tags"]} ({recordNotReallySymmetrical["tags"].GetType()})");
 Unindent();
 Unindent();
 Unindent();
@@ -126,6 +129,58 @@ try
     Console.WriteLine($"{indent}ID: {recordSymmetrical.Id} ({recordSymmetrical.Id.GetType()})");
     Console.WriteLine($"{indent}Category: {recordSymmetrical["category"]} ({recordSymmetrical["category"].GetType()})");
     Console.WriteLine($"{indent}Tags: {recordSymmetrical["tags"]} ({recordSymmetrical["tags"].GetType()})");
+    Unindent();
+    Unindent();
+    Unindent();
+}
+catch (Exception ex)
+{
+    Console.WriteLine(ex.ToString());
+}
+
+#endregion
+
+#region Shape for reading and writing, symmetrical with custom class
+
+try
+{
+    Console.WriteLine();
+    Console.WriteLine("Shape for reading and writing, symmetrical with custom class");
+    Indent();
+    var recordWithAdditionalPropertiesClass = new RecordWithAdditionalPropertiesClass
+    {
+        Id = "1",
+        ["category"] = "fiction",
+        ["title"] = "The Hobbit",
+        ["author"] = "J.R.R. Tolkien",
+        ["tags"] = tags
+    };
+
+    Indent();
+    Console.WriteLine($"{indent}---Writing---");
+    Indent();
+    Console.WriteLine(
+        $"{indent}ID: {recordWithAdditionalPropertiesClass.Id} ({recordWithAdditionalPropertiesClass.Id.GetType()})");
+    Console.WriteLine(
+        $"{indent}Category: {recordWithAdditionalPropertiesClass["category"]} ({recordWithAdditionalPropertiesClass["category"].GetType()})");
+    Console.WriteLine(
+        $"{indent}Tags: {recordWithAdditionalPropertiesClass["tags"]} ({recordWithAdditionalPropertiesClass["tags"].GetType()})");
+    Unindent();
+
+    recordWithAdditionalPropertiesClass =
+        JsonSerializer.Deserialize<RecordWithAdditionalPropertiesClass>(
+            JsonSerializer.Serialize(recordWithAdditionalPropertiesClass)) ??
+        throw new Exception("Unexpected null record");
+    var additionalProperties = recordWithAdditionalPropertiesClass.AdditionalProperties.ToJsonDocument();
+
+    Console.WriteLine();
+    Console.WriteLine($"{indent}---Reading---");
+    Indent();
+    Console.WriteLine(
+        $"{indent}ID: {recordWithAdditionalPropertiesClass.Id} ({recordWithAdditionalPropertiesClass.Id.GetType()})");
+    // Console.WriteLine(
+    //     $"{indent}Category: {additionalProperties["category"]} ({additionalProperties["category"].GetType()})");
+    // Console.WriteLine($"{indent}Tags: {additionalProperties["tags"]} ({additionalProperties["tags"].GetType()})");
     Unindent();
     Unindent();
     Unindent();
@@ -193,4 +248,51 @@ public record RecordSymmetrical
     }
 
     [JsonExtensionData] public JsonObject AdditionalProperties { get; set; } = new();
+}
+
+public record RecordWithAdditionalPropertiesClass
+{
+    [JsonPropertyName("id")] public string Id { get; set; }
+
+    [JsonIgnore]
+    public object? this[string key]
+    {
+        get => AdditionalProperties[key] ?? throw new KeyNotFoundException();
+        set => AdditionalProperties[key] = value;
+    }
+
+    [JsonExtensionData] public AdditionalProperties<object?> AdditionalProperties { get; set; } = new();
+}
+
+
+public class AdditionalProperties<T> : Dictionary<string, T>
+{
+    public JsonObject ToJsonObject()
+        => (JsonSerializer.SerializeToNode(this)
+            ?? throw new InvalidOperationException("Failed to serialize AdditionalProperties to JSON Node.")
+            ).AsObject();
+
+    public JsonNode ToJsonNode() => JsonSerializer.SerializeToNode(this) ??
+                                    throw new InvalidOperationException(
+                                        "Failed to serialize AdditionalProperties to JSON Node.");
+
+    public JsonElement ToJsonElement() => JsonSerializer.SerializeToElement(this);
+
+    public JsonDocument ToJsonDocument() => JsonSerializer.SerializeToDocument(this);
+
+    public IDictionary<string, JsonElement> ToJsonElementDictionary()
+    {
+        return new ReadOnlyDictionary<string, JsonElement>(this.ToDictionary(
+            kvp => kvp.Key,
+            kvp =>
+            {
+                if (kvp.Value is JsonElement jsonElement)
+                {
+                    return jsonElement;
+                }
+
+                return JsonSerializer.SerializeToElement(kvp.Value);
+            }
+        ));
+    }
 }
