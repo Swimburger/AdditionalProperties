@@ -19,7 +19,8 @@ var recordForReading = JsonSerializer.Deserialize<RecordForReading>(
         "category":"fiction",
         "title":"The Hobbit",
         "author":"J.R.R. Tolkien",
-        "tags": ["fantasy", "adventure"]
+        "tags": ["fantasy", "adventure"],
+        "borrower": null
     }
     """
 ) ?? throw new Exception("Unexpected null record");
@@ -28,6 +29,7 @@ Console.WriteLine($"{indent}ID: {recordForReading.Id} ({recordForReading.Id.GetT
 Console.WriteLine(
     $"{indent}Category: {recordForReading["category"].GetString()} ({recordForReading["category"].GetType()})");
 Console.WriteLine($"{indent}Tags: {recordForReading["tags"]} ({recordForReading["tags"].GetType()})");
+Console.WriteLine($"{indent}Borrower: {recordForReading["borrower"]} ({recordForReading["borrower"].GetType()})");
 Unindent();
 
 #endregion
@@ -43,12 +45,14 @@ var recordForWriting = new RecordForWriting
     ["category"] = "fiction",
     ["title"] = "The Hobbit",
     ["author"] = "J.R.R. Tolkien",
-    ["tags"] = tags
+    ["tags"] = tags,
+    ["borrower"] = null
 };
 
 Console.WriteLine($"{indent}ID: {recordForWriting.Id} ({recordForWriting.Id.GetType()})");
 Console.WriteLine($"{indent}Category: {recordForWriting["category"]} ({recordForWriting["category"].GetType()})");
 Console.WriteLine($"{indent}Tags: {recordForWriting["tags"]} ({recordForWriting["tags"].GetType()})");
+Console.WriteLine($"{indent}Borrower: {recordForWriting["borrower"]} ({recordForWriting["borrower"]?.GetType()})");
 Unindent();
 
 #endregion
@@ -64,7 +68,8 @@ var recordNotReallySymmetrical = new RecordNotReallySymmetrical
     ["category"] = "fiction",
     ["title"] = "The Hobbit",
     ["author"] = "J.R.R. Tolkien",
-    ["tags"] = tags
+    ["tags"] = tags,
+    ["borrower"] = null
 };
 
 Indent();
@@ -75,6 +80,7 @@ Console.WriteLine(
     $"{indent}Category: {recordNotReallySymmetrical["category"]} ({recordNotReallySymmetrical["category"].GetType()})");
 Console.WriteLine(
     $"{indent}Tags: {recordNotReallySymmetrical["tags"]} ({recordNotReallySymmetrical["tags"].GetType()})");
+Console.WriteLine($"{indent}Borrower: {recordNotReallySymmetrical["borrower"]} ({recordNotReallySymmetrical["borrower"]?.GetType()})");
 Unindent();
 recordNotReallySymmetrical =
     JsonSerializer.Deserialize<RecordNotReallySymmetrical>(JsonSerializer.Serialize(recordNotReallySymmetrical)) ??
@@ -88,6 +94,7 @@ Console.WriteLine(
     $"{indent}Category: {recordNotReallySymmetrical["category"]} ({recordNotReallySymmetrical["category"].GetType()})");
 Console.WriteLine(
     $"{indent}Tags: {recordNotReallySymmetrical["tags"]} ({recordNotReallySymmetrical["tags"].GetType()})");
+Console.WriteLine($"{indent}Borrower: {recordNotReallySymmetrical["borrower"]} ({recordNotReallySymmetrical["borrower"]?.GetType()})");
 Unindent();
 Unindent();
 Unindent();
@@ -107,7 +114,8 @@ try
         ["category"] = "fiction",
         ["title"] = "The Hobbit",
         ["author"] = "J.R.R. Tolkien",
-        ["tags"] = JsonValue.Create(tags)
+        ["tags"] = JsonValue.Create(tags),
+        ["borrower"] = null
     };
 
     Indent();
@@ -116,6 +124,7 @@ try
     Console.WriteLine($"{indent}ID: {recordSymmetrical.Id} ({recordSymmetrical.Id.GetType()})");
     Console.WriteLine($"{indent}Category: {recordSymmetrical["category"]} ({recordSymmetrical["category"].GetType()})");
     Console.WriteLine($"{indent}Tags: {recordSymmetrical["tags"]} ({recordSymmetrical["tags"].GetType()})");
+    Console.WriteLine($"{indent}Borrower: {recordSymmetrical["borrower"]} ({recordSymmetrical["borrower"]?.GetType()})");
     Unindent();
 
 // doesn't work because of bug: https://github.com/dotnet/runtime/issues/97225
@@ -129,6 +138,7 @@ try
     Console.WriteLine($"{indent}ID: {recordSymmetrical.Id} ({recordSymmetrical.Id.GetType()})");
     Console.WriteLine($"{indent}Category: {recordSymmetrical["category"]} ({recordSymmetrical["category"].GetType()})");
     Console.WriteLine($"{indent}Tags: {recordSymmetrical["tags"]} ({recordSymmetrical["tags"].GetType()})");
+    Console.WriteLine($"{indent}Borrower: {recordSymmetrical["borrower"]} ({recordSymmetrical["borrower"]?.GetType()})");
     Unindent();
     Unindent();
     Unindent();
@@ -153,7 +163,8 @@ try
         ["category"] = "fiction",
         ["title"] = "The Hobbit",
         ["author"] = "J.R.R. Tolkien",
-        ["tags"] = tags
+        ["tags"] = tags,
+        ["borrower"] = null
     };
 
     Indent();
@@ -165,6 +176,7 @@ try
         $"{indent}Category: {recordWithAdditionalPropertiesClass["category"]} ({recordWithAdditionalPropertiesClass["category"].GetType()})");
     Console.WriteLine(
         $"{indent}Tags: {recordWithAdditionalPropertiesClass["tags"]} ({recordWithAdditionalPropertiesClass["tags"].GetType()})");
+    Console.WriteLine($"{indent}Borrower: {recordWithAdditionalPropertiesClass["borrower"]} ({recordWithAdditionalPropertiesClass["borrower"]?.GetType()})");
     Unindent();
 
     recordWithAdditionalPropertiesClass =
@@ -181,6 +193,7 @@ try
     Console.WriteLine(
         $"{indent}Category: {additionalProperties["category"]} ({additionalProperties["category"].GetType()})");
     Console.WriteLine($"{indent}Tags: {additionalProperties["tags"]} ({additionalProperties["tags"].GetType()})");
+    Console.WriteLine($"{indent}Borrower: {additionalProperties["borrower"]} ({additionalProperties["borrower"].GetType()})");
     Unindent();
     Unindent();
     Unindent();
@@ -241,9 +254,9 @@ public record RecordSymmetrical
     [JsonPropertyName("id")] public string Id { get; set; }
 
     [JsonIgnore]
-    public JsonNode this[string key]
+    public JsonNode? this[string key]
     {
-        get => AdditionalProperties[key] ?? throw new KeyNotFoundException();
+        get => AdditionalProperties[key];
         set => AdditionalProperties[key] = value;
     }
 
@@ -257,7 +270,7 @@ public record RecordWithAdditionalPropertiesClass
     [JsonIgnore]
     public object? this[string key]
     {
-        get => AdditionalProperties[key] ?? throw new KeyNotFoundException();
+        get => AdditionalProperties[key];
         set => AdditionalProperties[key] = value;
     }
 
