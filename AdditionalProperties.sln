@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdditionalProperties", "AdditionalProperties\AdditionalProperties.csproj", "{225AF485-7BAB-457C-A495-8B23B3A820EA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdditionalProperties.Test", "AdditionalProperties.Test\AdditionalProperties.Test.csproj", "{782770FA-8D5D-4577-9DBB-44476C1F739B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{225AF485-7BAB-457C-A495-8B23B3A820EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{225AF485-7BAB-457C-A495-8B23B3A820EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{225AF485-7BAB-457C-A495-8B23B3A820EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{782770FA-8D5D-4577-9DBB-44476C1F739B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{782770FA-8D5D-4577-9DBB-44476C1F739B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{782770FA-8D5D-4577-9DBB-44476C1F739B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{782770FA-8D5D-4577-9DBB-44476C1F739B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

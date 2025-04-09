@@ -6,34 +6,6 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-var options = new JsonSerializerOptions
-{
-    TypeInfoResolver = new DefaultJsonTypeInfoResolver()
-    {
-        Modifiers =
-        {
-            static typeInfo =>
-            {
-                if (typeInfo.Kind == JsonTypeInfoKind.Object && 
-                    typeInfo.Properties.All(prop => !prop.IsExtensionData))
-                {
-                    var extensionProp = typeInfo.Type
-                        .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
-                        .FirstOrDefault(prop => prop.GetCustomAttribute<JsonExtensionDataAttribute>() != null);
-
-                    if (extensionProp == null) return;
-                    
-                    var jsonPropertyInfo = typeInfo.CreateJsonPropertyInfo(extensionProp.FieldType, extensionProp.Name);
-                    jsonPropertyInfo.Get = extensionProp.GetValue;
-                    jsonPropertyInfo.Set = extensionProp.SetValue;
-                    jsonPropertyInfo.IsExtensionData = true;
-                    typeInfo.Properties.Add(jsonPropertyInfo);
-                }
-            }
-        }
-    }
-};
-
 var indent = "";
 void Indent() => indent += "  ";
 void Unindent() => indent = indent[2..];
@@ -44,7 +16,7 @@ try
     Console.WriteLine();
     Console.WriteLine("Shape for reading and writing, symmetrical with custom class");
     Indent();
-    var record = JsonSerializer.Deserialize<Record>(
+    var record = JsonUtils.Deserialize<Record>(
         """
         {
             "id":"1",
@@ -54,8 +26,7 @@ try
             "tags": ["fantasy", "adventure"],
             "borrower": null
         }
-        """,
-        options
+        """
     ) ?? throw new Exception("Unexpected null record");
     var additionalProperties = record.AdditionalProperties;
 
@@ -73,8 +44,8 @@ try
     Unindent();
 
     record =
-        JsonSerializer.Deserialize<Record>(
-            JsonSerializer.Serialize(record, options), options) ??
+        JsonUtils.Deserialize<Record>(
+            JsonUtils.Serialize(record)) ??
         throw new Exception("Unexpected null record");
     additionalProperties = record.AdditionalProperties;
 
@@ -129,8 +100,8 @@ try
 
 // doesn't work because of bug: https://github.com/dotnet/runtime/issues/97225
     recordSymmetrical =
-        JsonSerializer.Deserialize<RecordWithWriteableAdditionalProperties>(
-            JsonSerializer.Serialize(recordSymmetrical, options), options) ??
+        JsonUtils.Deserialize<RecordWithWriteableAdditionalProperties>(
+            JsonUtils.Serialize(recordSymmetrical)) ??
         throw new Exception("Unexpected null record");
 
     additionalProperties = recordSymmetrical.AdditionalProperties;
@@ -160,8 +131,8 @@ public record Record : IJsonOnDeserialized
     private readonly IDictionary<string, JsonElement> _extensionData = new Dictionary<string, JsonElement>();
 
     [JsonIgnore] public ReadOnlyAdditionalProperties AdditionalProperties { get; } = new();
-    
-    public void OnDeserialized()
+
+    void IJsonOnDeserialized.OnDeserialized()
     {
         AdditionalProperties.CopyFromExtensionData(_extensionData);
     }
@@ -176,18 +147,19 @@ public record RecordWithWriteableAdditionalProperties : IJsonOnDeserialized, IJs
 
     [JsonIgnore] public AdditionalProperties<object?> AdditionalProperties { get; set; } = new();
 
-    public void OnDeserialized()
+    void IJsonOnDeserialized.OnDeserialized()
     {
         AdditionalProperties.CopyFromExtensionData(_extensionData);
     }
 
-    public void OnSerializing()
+    void IJsonOnSerializing.OnSerializing()
     {
         AdditionalProperties.CopyToExtensionData(_extensionData);
     }
 }
 
 public record ReadOnlyAdditionalProperties : ReadOnlyAdditionalProperties<JsonElement>;
+
 public record ReadOnlyAdditionalProperties<T> : IReadOnlyDictionary<string, T>
 {
     private readonly Dictionary<string, JsonElement> _extensionData = new();
@@ -271,13 +243,13 @@ public record AdditionalProperties<T> : IDictionary<string, T>
     private readonly Dictionary<string, object?> _extensionData;
     private readonly Dictionary<string, T> _convertedExtensionDataCache;
 
-    internal AdditionalProperties()
+    public AdditionalProperties()
     {
         _extensionData = new Dictionary<string, object?>();
         _convertedExtensionDataCache = new Dictionary<string, T>();
     }
 
-    internal AdditionalProperties(IDictionary<string, T> properties)
+    public AdditionalProperties(IDictionary<string, T> properties)
     {
         _extensionData = new Dictionary<string, object?>(properties.Count);
         _convertedExtensionDataCache = new Dictionary<string, T>(properties.Count);
@@ -299,7 +271,7 @@ public record AdditionalProperties<T> : IDictionary<string, T>
         };
     }
 
-    public void CopyFromExtensionData(IDictionary<string, object?> extensionData)
+    internal void CopyFromExtensionData(IDictionary<string, object?> extensionData)
     {
         _extensionData.Clear();
         _convertedExtensionDataCache.Clear();
@@ -476,4 +448,43 @@ public record AdditionalProperties<T> : IDictionary<string, T>
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+
+public static class JsonUtils
+{
+    private static readonly JsonSerializerOptions _options = new JsonSerializerOptions
+    {
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver
+        {
+            Modifiers =
+            {
+                static typeInfo =>
+                {
+                    if (typeInfo.Kind == JsonTypeInfoKind.Object &&
+                        typeInfo.Properties.All(prop => !prop.IsExtensionData))
+                    {
+                        var extensionProp = typeInfo.Type
+                            .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
+                            .FirstOrDefault(prop => prop.GetCustomAttribute<JsonExtensionDataAttribute>() != null);
+
+                        if (extensionProp is not null)
+                        {
+                            var jsonPropertyInfo =
+                                typeInfo.CreateJsonPropertyInfo(extensionProp.FieldType, extensionProp.Name);
+                            jsonPropertyInfo.Get = extensionProp.GetValue;
+                            jsonPropertyInfo.Set = extensionProp.SetValue;
+                            jsonPropertyInfo.IsExtensionData = true;
+                            typeInfo.Properties.Add(jsonPropertyInfo);
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    public static T? Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json, _options);
+
+    public static string Serialize<T>(T obj) => JsonSerializer.Serialize(obj, _options);
+
+    public static JsonElement SerializeToElement(object value) => JsonSerializer.SerializeToElement(value, _options);
 }
